@@ -1,0 +1,12 @@
+{
+  "name": "analytics-assistant-v2-vercel",
+  "version": "1.0.0",
+  "description": "AI-powered analytics assistant deployed on Vercel with Claude API",
+  "private": true,
+  "engines": {
+    "node": "18.x"
+  },
+  "scripts": {
+    "dev": "echo 'Run vercel dev locally for testing'"
+  }
+}
