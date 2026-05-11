@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>AI Analytics Assistant v2 - Vercel Edition</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,800&family=Geist+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+:root {
+  --bg: #0f0f10;
+  --bg-2: #18181b;
+  --card: #1c1c20;
+  --border: #2a2a30;
+  --text: #f5f0e8;
+  --text-muted: #8a8a92;
+  --accent: #ffb454;
+  --accent-dim: #c8893f;
+  --good: #5be9c4;
+  --bad: #ff7676;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', 'Inter Tight', sans-serif;
+  font-size: 14px;
+  min-height: 100vh;
+}
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+header {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 20px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+header h1 {
+  font-family: 'Fraunces', serif;
+  font-weight: 800;
+  font-size: 36px;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+header h1 .v {
+  color: var(--accent);
+  font-style: italic;
+  font-weight: 500;
+}
+header .meta {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-family: 'Geist Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.search {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.search input {
+  flex: 1;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  color: var(--text);
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .2s;
+}
+.search input:focus {
+  border-color: var(--accent);
+}
+.search button {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 8px;
+  padding: 0 28px;
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: opacity .2s;
+}
+.search button:disabled { opacity: 0.5; cursor: not-allowed; }
+.search button:hover:not(:disabled) { opacity: 0.9; }
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.chip {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.chip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.banner {
+  background: linear-gradient(90deg, rgba(255,180,84,0.10), transparent 60%);
+  border-left: 3px solid var(--accent);
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+  display: none;
+}
+.banner.visible { display: block; }
+.banner .title {
+  font-family: 'Geist Mono', monospace;
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.banner .body {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px;
+}
+.card .label {
+  font-family: 'Geist Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  font-weight: 500;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+.kpi-tile {
+  background: var(--bg-2);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.kpi-tile .name {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.kpi-tile .val {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.kpi-tile .delta {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  margin-top: 4px;
+}
+.delta.up { color: var(--good); }
+.delta.down { color: var(--bad); }
+
+.insight p { margin: 0 0 10px 0; line-height: 1.6; }
+.insight .summary {
+  font-family: 'Fraunces', serif;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--accent);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+.insight h4 {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  margin: 14px 0 6px 0;
+  font-family: 'Geist Mono', monospace;
+  font-weight: 500;
+}
+.insight ul {
+  margin: 0; padding-left: 18px;
+  color: var(--text);
+  line-height: 1.6;
+  font-size: 13px;
+}
+.insight ul li { margin-bottom: 4px; }
+.insight .action {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+.insight .action .pri {
+  flex-shrink: 0;
+  font-family: 'Geist Mono', monospace;
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.pri.high { background: rgba(255,118,118,0.15); color: var(--bad); }
+.pri.med { background: rgba(255,180,84,0.15); color: var(--accent); }
+.pri.low { background: rgba(91,233,196,0.15); color: var(--good); }
+.action .body strong { font-size: 13px; }
+.action .body span { color: var(--text-muted); font-size: 12px; line-height: 1.4; display: block; margin-top: 2px; }
+
+.chart-wrap {
+  height: 280px;
+  position: relative;
+}
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td {
+  padding: 8px 6px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+th {
+  font-family: 'Geist Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+td.num {
+  font-family: 'Geist Mono', monospace;
+  text-align: right;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-2) 25%, #25252a 50%, var(--bg-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 4px;
+  height: 14px;
+  margin-bottom: 8px;
+}
+.skeleton.w70 { width: 70%; }
+.skeleton.w50 { width: 50%; }
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.followup-chip {
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.followup-chip:hover {
+  border-color: var(--accent);
+  border-style: solid;
+  background: rgba(255,180,84,0.05);
+}
+
+.fade-in {
+  animation: fadeIn .4s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 760px) {
+  .row { grid-template-columns: 1fr; }
+  header h1 { font-size: 28px; }
+  .container { padding: 20px 16px 60px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <h1>Analytics Assistant <span class="v">v2</span></h1>
+    </div>
+    <div class="meta">
+      Mock Dataset · Apr 2026 · Vercel Deployed
+    </div>
+  </header>
+
+  <div class="banner" id="banner">
+    <div class="title">⚠ Anomaly Detected</div>
+    <div class="body" id="bannerBody"></div>
+  </div>
+
+  <div class="search">
+    <input id="q" placeholder="예: 4/23 결제 완료율이 왜 떨어졌어?" />
+    <button id="runBtn" onclick="run()">분석</button>
+  </div>
+
+  <div class="chips">
+    <div class="chip" onclick="setQ(this)">4/23 결제 완료율이 왜 떨어졌어?</div>
+    <div class="chip" onclick="setQ(this)">최근 일주일 전환율 추이는?</div>
+    <div class="chip" onclick="setQ(this)">어떤 채널이 가장 효율적이야?</div>
+    <div class="chip" onclick="setQ(this)">결제 실패 주요 원인은?</div>
+    <div class="chip" onclick="setQ(this)">funnel 어디서 가장 많이 이탈해?</div>
+    <div class="chip" onclick="setQ(this)">4/15에 무슨 일 있었어?</div>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <div class="label">📊 KPI</div>
+      <div class="kpi-grid" id="kpi"></div>
+    </div>
+    <div class="card">
+      <div class="label">🤖 AI Insight (Claude)</div>
+      <div class="insight" id="ai"></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <div class="label" id="chartTitle">📈 분석 차트</div>
+      <div class="chart-wrap"><canvas id="chart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="label">📋 상세 데이터</div>
+      <div id="table"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 16px;">
+    <div class="label">💡 추천 후속 질문</div>
+    <div class="kpi-grid" id="followUps" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));"></div>
+  </div>
+</div>
+
+<script>
+// ============ MOCK DATASET (동일 - 변경 없음) ============
+const DATA = (function() {
+  function s(d) {
+    const x = Math.sin(d * 9301 + 49297) * 233280;
+    return x - Math.floor(x);
+  }
+  function jit(d, base, range) {
+    return Math.floor(base + (s(d) - 0.5) * range * 2);
+  }
+
+  const daily = [];
+  for (let i = 1; i <= 30; i++) {
+    const date = `2026-04-${String(i).padStart(2,'0')}`;
+    let home   = jit(i,      1000, 120);
+    let search = Math.floor(home   * (0.68 + (s(i+10) - 0.5) * 0.08));
+    let detail = Math.floor(search * (0.50 + (s(i+20) - 0.5) * 0.08));
+    let cart   = Math.floor(detail * (0.25 + (s(i+30) - 0.5) * 0.06));
+    let pay    = Math.floor(cart   * (0.60 + (s(i+40) - 0.5) * 0.08));
+    let complete = Math.floor(pay  * (0.85 + (s(i+50) - 0.5) * 0.04));
+
+    if (i === 8)  { home = Math.floor(home * 1.45); search = Math.floor(search * 1.4); detail = Math.floor(detail * 1.35); }
+    if (i === 15) { cart = Math.floor(cart * 0.55); pay = Math.floor(pay * 0.5); complete = Math.floor(complete * 0.5); }
+    if (i === 23) { complete = Math.floor(pay * 0.42); }
+
+    daily.push({ date, home, search, detail, cart, pay, complete });
+  }
+
+  return {
+    daily,
+    channels: [
+      { name: 'Organic', visits: 14200, converted: 596, cvr: 4.2 },
+      { name: 'Paid',    visits: 9800,  converted: 568, cvr: 5.8 },
+      { name: 'Social',  visits: 7100,  converted: 149, cvr: 2.1 },
+      { name: 'Direct',  visits: 4900,  converted: 318, cvr: 6.5 },
+      { name: 'Email',   visits: 2400,  converted: 213, cvr: 8.9 }
+    ],
+    paymentFailures: [
+      { reason: 'Card declined',      count: 412, rate: 35 },
+      { reason: 'Insufficient funds', count: 235, rate: 20 },
+      { reason: 'Network error',      count: 211, rate: 18 },
+      { reason: 'Fraud check',        count: 176, rate: 15 },
+      { reason: 'Expired card',       count: 141, rate: 12 }
+    ],
+    segments: {
+      device: [
+        { name: 'Mobile',  visits: 24400, cvr: 3.8 },
+        { name: 'Desktop', visits: 14000, cvr: 5.6 }
+      ],
+      user: [
+        { name: 'New',       visits: 16100, cvr: 2.9 },
+        { name: 'Returning', visits: 22300, cvr: 5.7 }
+      ]
+    }
+  };
+})();
+
+function detectAnomalies() {
+  const rates = DATA.daily.map(d => d.complete / d.pay);
+  const mean = rates.reduce((a,b)=>a+b, 0) / rates.length;
+  const std  = Math.sqrt(rates.reduce((s,v) => s + (v-mean)**2, 0) / rates.length);
+  const out = [];
+  DATA.daily.forEach((d, i) => {
+    const z = (rates[i] - mean) / std;
+    if (Math.abs(z) > 1.8) {
+      out.push({
+        date: d.date,
+        metric: '결제 완료율',
+        value: (rates[i]*100).toFixed(1) + '%',
+        z: z.toFixed(2),
+        direction: z < 0 ? 'down' : 'up'
+      });
+    }
+  });
+  return out;
+}
+
+function showAnomalyBanner() {
+  const a = detectAnomalies();
+  if (a.length === 0) return;
+  const banner = document.getElementById('banner');
+  document.getElementById('bannerBody').innerHTML = a.map(x =>
+    `<strong>${x.date}</strong> · ${x.metric} <span style="font-family:'Geist Mono',monospace;">${x.value}</span> <span style="color: var(--text-muted);">(z=${x.z})</span>`
+  ).join(' &nbsp;·&nbsp; ');
+  banner.classList.add('visible');
+}
+
+function parseQuestion(q) {
+  const ctx = { question: q, focus: 'overall' };
+  const dateMatch = q.match(/4[\/\-월\s]\s*(\d{1,2})/);
+  if (dateMatch) {
+    ctx.date = `2026-04-${String(parseInt(dateMatch[1])).padStart(2,'0')}`;
+    ctx.focus = 'date';
+  }
+  if (q.includes('채널')) ctx.focus = 'channel';
+  else if (q.includes('결제') && (q.includes('실패') || q.includes('원인') || q.includes('사유'))) ctx.focus = 'payment_failures';
+  else if (q.includes('결제') || q.includes('완료')) ctx.focus = ctx.date ? 'date' : 'payment_failures';
+  else if (q.includes('funnel') || q.includes('이탈') || q.includes('어디서')) ctx.focus = 'funnel';
+  else if (q.includes('전환') || q.includes('추이') || q.includes('일주일') || q.includes('최근')) ctx.focus = 'timeseries';
+  else if (q.includes('세그먼트') || q.includes('신규') || q.includes('재방문') || q.includes('모바일')) ctx.focus = 'segment';
+  return ctx;
+}
+
+function buildContext(ctx) {
+  const result = { focus: ctx.focus };
+  if (ctx.focus === 'date' && ctx.date) {
+    const idx = DATA.daily.findIndex(d => d.date === ctx.date);
+    if (idx >= 0) {
+      result.targetDay = DATA.daily[idx];
+      result.surrounding = DATA.daily.slice(Math.max(0, idx-3), Math.min(DATA.daily.length, idx+4));
+      result.avgCompletionRate = +(DATA.daily.reduce((s,d) => s + d.complete/d.pay, 0) / DATA.daily.length * 100).toFixed(1);
+      result.targetCompletionRate = +(result.targetDay.complete / result.targetDay.pay * 100).toFixed(1);
+      result.allFailureReasons = DATA.paymentFailures;
+    }
+  } else if (ctx.focus === 'timeseries') {
+    result.recent = DATA.daily.slice(-7);
+    result.previous = DATA.daily.slice(-14, -7);
+    result.recent14 = DATA.daily.slice(-14);
+  } else if (ctx.focus === 'channel') {
+    result.channels = DATA.channels;
+  } else if (ctx.focus === 'payment_failures') {
+    result.failures = DATA.paymentFailures;
+  } else if (ctx.focus === 'funnel') {
+    const recent = DATA.daily.slice(-7);
+    result.funnel = recent.reduce((acc, d) => ({
+      home: acc.home + d.home, search: acc.search + d.search, detail: acc.detail + d.detail,
+      cart: acc.cart + d.cart, pay: acc.pay + d.pay, complete: acc.complete + d.complete
+    }), { home:0, search:0, detail:0, cart:0, pay:0, complete:0 });
+  } else if (ctx.focus === 'segment') {
+    result.segments = DATA.segments;
+  } else {
+    result.recent = DATA.daily.slice(-7);
+    result.channels = DATA.channels;
+  }
+  return result;
+}
+
+function renderKPIs(focus, ctx) {
+  const kpi = document.getElementById('kpi');
+  let tiles = [];
+
+  if (focus === 'date' && ctx.targetDay) {
+    const t = ctx.targetDay;
+    const cvr = (t.complete / t.home * 100).toFixed(2);
+    const completion = (t.complete / t.pay * 100).toFixed(1);
+    const dropOff = ((t.cart - t.pay) / t.cart * 100).toFixed(1);
+    const delta = (completion - ctx.avgCompletionRate).toFixed(1);
+    tiles = [
+      { name: '전체 방문', val: t.home.toLocaleString() },
+      { name: '전환율', val: cvr + '%' },
+      { name: '결제 완료율', val: completion + '%', delta: (delta > 0 ? '+' : '') + delta + '%p' },
+      { name: 'Cart → Pay 이탈', val: dropOff + '%' }
+    ];
+  } else if (focus === 'timeseries' && ctx.recent) {
+    const rCvr = ctx.recent.reduce((s,d) => s + d.complete, 0) / ctx.recent.reduce((s,d) => s + d.home, 0) * 100;
+    const pCvr = ctx.previous.reduce((s,d) => s + d.complete, 0) / ctx.previous.reduce((s,d) => s + d.home, 0) * 100;
+    const delta = (rCvr - pCvr).toFixed(2);
+    tiles = [
+      { name: '최근 7일 전환율', val: rCvr.toFixed(2) + '%', delta: (delta > 0 ? '+' : '') + delta + '%p' },
+      { name: '7일 총 방문', val: ctx.recent.reduce((s,d)=>s+d.home,0).toLocaleString() },
+      { name: '7일 총 완료', val: ctx.recent.reduce((s,d)=>s+d.complete,0).toLocaleString() },
+      { name: '일평균 cart 진입', val: Math.round(ctx.recent.reduce((s,d)=>s+d.cart,0)/7).toLocaleString() }
+    ];
+  } else if (focus === 'channel' && ctx.channels) {
+    const top = [...ctx.channels].sort((a,b) => b.cvr - a.cvr)[0];
+    const total = ctx.channels.reduce((s,c) => s + c.visits, 0);
+    tiles = [
+      { name: '최고 CVR 채널', val: top.name },
+      { name: 'Top CVR', val: top.cvr + '%' },
+      { name: '총 방문', val: total.toLocaleString() },
+      { name: '총 전환', val: ctx.channels.reduce((s,c)=>s+c.converted,0).toLocaleString() }
+    ];
+  } else if (focus === 'payment_failures' && ctx.failures) {
+    const total = ctx.failures.reduce((s,f) => s + f.count, 0);
+    tiles = [
+      { name: '총 결제 실패', val: total.toLocaleString() },
+      { name: '주요 원인', val: ctx.failures[0].reason },
+      { name: '주요 원인 비중', val: ctx.failures[0].rate + '%' },
+      { name: '실패 사유 수', val: ctx.failures.length }
+    ];
+  } else if (focus === 'funnel' && ctx.funnel) {
+    const f = ctx.funnel;
+    tiles = [
+      { name: '7일 Home', val: f.home.toLocaleString() },
+      { name: 'Cart 도달', val: f.cart.toLocaleString() },
+      { name: '결제 완료', val: f.complete.toLocaleString() },
+      { name: '전체 CVR', val: (f.complete / f.home * 100).toFixed(2) + '%' }
+    ];
+  } else {
+    const recent = ctx.recent || DATA.daily.slice(-7);
+    tiles = [
+      { name: '최근 7일 방문', val: recent.reduce((s,d)=>s+d.home,0).toLocaleString() },
+      { name: '최근 7일 완료', val: recent.reduce((s,d)=>s+d.complete,0).toLocaleString() },
+      { name: '평균 CVR', val: (recent.reduce((s,d)=>s+d.complete,0) / recent.reduce((s,d)=>s+d.home,0) * 100).toFixed(2) + '%' }
+    ];
+  }
+
+  kpi.innerHTML = tiles.map(t => `
+    <div class="kpi-tile fade-in">
+      <div class="name">${t.name}</div>
+      <div class="val">${t.val}</div>
+      ${t.delta ? `<div class="delta ${t.delta.startsWith('-') ? 'down' : 'up'}">${t.delta.startsWith('-') ? '▼' : '▲'} ${t.delta.replace(/^[+-]/, '')}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+let chart;
+function renderChart(focus, ctx) {
+  if (chart) chart.destroy();
+  const titleEl = document.getElementById('chartTitle');
+  const c2 = document.getElementById('chart').getContext('2d');
+  Chart.defaults.color = '#8a8a92';
+  Chart.defaults.font.family = 'Geist Mono, monospace';
+  Chart.defaults.font.size = 11;
+  const grid = { color: '#2a2a30', drawBorder: false };
+  const ticks = { color: '#8a8a92' };
+
+  if (focus === 'date' && ctx.targetDay) {
+    titleEl.innerText = '📈 전후 결제 완료율 추이';
+    const days = ctx.surrounding;
+    chart = new Chart(c2, {
+      type: 'line',
+      data: {
+        labels: days.map(d => d.date.slice(5)),
+        datasets: [{
+          label: '결제 완료율 (%)',
+          data: days.map(d => +(d.complete/d.pay*100).toFixed(1)),
+          borderColor: '#ffb454',
+          backgroundColor: 'rgba(255,180,84,0.12)',
+          tension: 0.3, fill: true, borderWidth: 2,
+          pointBackgroundColor: days.map(d => d.date === ctx.targetDay.date ? '#ff7676' : '#ffb454'),
+          pointBorderColor: days.map(d => d.date === ctx.targetDay.date ? '#ff7676' : '#ffb454'),
+          pointRadius: days.map(d => d.date === ctx.targetDay.date ? 6 : 4)
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false,
+        scales: { y: { grid, ticks }, x: { grid: {display:false}, ticks } },
+        plugins: { legend: { display: false } }
+      }
+    });
+  } else {
+    titleEl.innerText = '📈 최근 14일 전환율 추이';
+    const days = DATA.daily.slice(-14);
+    chart = new Chart(c2, {
+      type: 'line',
+      data: {
+        labels: days.map(d => d.date.slice(5)),
+        datasets: [{
+          label: '전환율 (%)',
+          data: days.map(d => +(d.complete/d.home*100).toFixed(2)),
+          borderColor: '#ffb454', backgroundColor: 'rgba(255,180,84,0.12)',
+          tension: 0.3, fill: true, borderWidth: 2
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false,
+        scales: { y: { grid, ticks }, x: { grid: {display:false}, ticks } },
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
+}
+
+function renderTable(focus, ctx) {
+  const t = document.getElementById('table');
+  let html = '<div style="color: var(--text-muted); padding: 10px; font-size: 13px;">데이터 표</div>';
+  t.innerHTML = html;
+}
+
+// ============ VERCEL API CALL (fetch to /api/analyze) ============
+async function callClaude(question, context) {
+  try {
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, context })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'API 응답 오류');
+    }
+
+    const data = await response.json();
+    return data.insight;
+  } catch (e) {
+    console.error('Claude API error:', e);
+    return null;
+  }
+}
+
+function renderInsight(insight) {
+  const el = document.getElementById('ai');
+  if (!insight) {
+    el.innerHTML = `
+      <p class="summary" style="color: var(--bad);">⚠ AI 분석 호출 실패</p>
+      <p style="color: var(--text-muted); font-size: 13px;">API 응답이 없거나 파싱 실패. Vercel 배포가 올바르게 되었는지 확인하세요.</p>
+    `;
+    return;
+  }
+  el.classList.add('fade-in');
+  el.innerHTML = `
+    <p class="summary">${insight.summary || ''}</p>
+    <h4>원인 분석</h4>
+    <p style="font-size: 13px; line-height: 1.6;">${insight.cause || ''}</p>
+    ${insight.hypotheses && insight.hypotheses.length ? `
+      <h4>검증 가설</h4>
+      <ul>${insight.hypotheses.map(h => `<li>${h}</li>`).join('')}</ul>
+    ` : ''}
+    ${insight.actions && insight.actions.length ? `
+      <h4>추천 액션</h4>
+      ${insight.actions.map(a => `
+        <div class="action">
+          <span class="pri ${a.priority||'med'}">${a.priority||'med'}</span>
+          <div class="body">
+            <strong>${a.title || ''}</strong>
+            <span>${a.detail || ''}</span>
+          </div>
+        </div>
+      `).join('')}
+    ` : ''}
+  `;
+}
+
+function renderFollowUps(insight) {
+  const el = document.getElementById('followUps');
+  if (!insight || !insight.followUps || !insight.followUps.length) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = insight.followUps.map(q =>
+    `<button class="followup-chip">${q}</button>`
+  ).join('');
+  el.querySelectorAll('.followup-chip').forEach((btn, i) => {
+    btn.addEventListener('click', () => {
+      document.getElementById('q').value = insight.followUps[i];
+      run();
+    });
+  });
+}
+
+function showLoading() {
+  document.getElementById('ai').innerHTML = `
+    <div class="skeleton w70"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton w50"></div>
+    <div class="skeleton"></div>
+  `;
+  document.getElementById('followUps').innerHTML = '';
+}
+
+async function run() {
+  const q = document.getElementById('q').value.trim();
+  if (!q) return;
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  btn.innerText = '분석 중...';
+
+  const parsed = parseQuestion(q);
+  const context = buildContext(parsed);
+
+  renderKPIs(parsed.focus, context);
+  renderChart(parsed.focus, context);
+  renderTable(parsed.focus, context);
+  showLoading();
+
+  const insight = await callClaude(q, context);
+  renderInsight(insight);
+  renderFollowUps(insight);
+
+  btn.disabled = false;
+  btn.innerText = '분석';
+}
+
+function setQ(el) {
+  document.getElementById('q').value = el.innerText;
+  run();
+}
+
+window.addEventListener('load', () => {
+  showAnomalyBanner();
+  document.getElementById('q').value = '4/23 결제 완료율이 왜 떨어졌어?';
+  run();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('q').addEventListener('keypress', e => {
+    if (e.key === 'Enter') run();
+  });
+});
+</script>
+</body>
+</html>
