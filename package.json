@@ -4,7 +4,7 @@
   "description": "AI-powered analytics assistant deployed on Vercel with Claude API",
   "private": true,
   "engines": {
-    "node": "18.x"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "echo 'Run vercel dev locally for testing'"
