@@ -1,0 +1,30 @@
+# 절대로 git에 올리면 안 되는 것들
+
+# 환경 변수 (API key 등)
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 의존성
+node_modules/
+package-lock.json
+yarn.lock
+
+# Vercel
+.vercel/
+.next/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 로그
+*.log
+npm-debug.log*
+yarn-debug.log*
