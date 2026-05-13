@@ -100,10 +100,16 @@ priority는 high/med/low. actions는 2-3개. followUps는 정확히 3개. 데이
           }]
         }],
         generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 1500,
-          responseMimeType: 'application/json'  // JSON 모드 — 마크다운 펜스 없이 순수 JSON 반환
-        }
+  temperature: 0.3,
+  maxOutputTokens: 4000,  // 1500 → 4000 (여유롭게)
+  responseMimeType: 'application/json',
+  thinkingConfig: {
+    thinkingBudget: 0  // ← 이거 추가. thinking 끄기
+  }
+}
+
+
+        
       })
     });
 
