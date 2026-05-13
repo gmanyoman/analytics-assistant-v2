@@ -1,8 +1,8 @@
 // api/analyze.js
 // Vercel serverless function for Analytics Assistant v2
-// Handles Claude API calls with rate limiting and cost protection
+// Handles Gemini API calls with rate limiting and cost protection
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 // 간단한 메모리 기반 rate limiting (하루당 IP당 50회)
 let dailyRequests = {};
@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
+
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -22,7 +22,7 @@ export default async function handler(req, res) {
   }
 
   const { question, context } = req.body;
-  
+
   // 입력 검증
   if (!question || typeof question !== 'string' || question.trim().length === 0) {
     return res.status(400).json({ error: 'Missing or invalid question' });
@@ -36,16 +36,14 @@ export default async function handler(req, res) {
     const today = new Date().toISOString().split('T')[0];
     const ip = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown';
     const key = `${today}:${ip}`;
-    
+
     dailyRequests[key] = (dailyRequests[key] || 0) + 1;
-    
-    // 콘솔에 로깅 (Vercel 대시보드에서 확인 가능)
-    console.log(`[${new Date().toISOString()}] IP=${ip}, day=${today}, requests=${dailyRequests[key]}, question="${question.substring(0,50)}..."`);
-    
-    // 하루 50회 초과 시 거부
+
+    console.log(`[${new Date().toISOString()}] IP=${ip}, day=${today}, requests=${dailyRequests[key]}, question="${question.substring(0, 50)}..."`);
+
     if (dailyRequests[key] > 50) {
-      return res.status(429).json({ 
-        error: `일일 요청 제한(50회)을 초과했습니다. 내일 다시 시도하세요.` 
+      return res.status(429).json({
+        error: `일일 요청 제한(50회)을 초과했습니다. 내일 다시 시도하세요.`
       });
     }
 
@@ -59,19 +57,18 @@ export default async function handler(req, res) {
 
   } catch (e) {
     console.error('Rate limiting error:', e);
-    // rate limiting 실패해도 계속 진행 (너무 중요하지 않음)
   }
 
   try {
     // API key 확인
-    if (!ANTHROPIC_API_KEY) {
-      console.error('ANTHROPIC_API_KEY not set in environment');
+    if (!GEMINI_API_KEY) {
+      console.error('GEMINI_API_KEY not set in environment');
       return res.status(500).json({ error: 'Server configuration error: API key not set' });
     }
 
     // 시스템 프롬프트
     const systemPrompt = `당신은 데이터 분석가입니다. 사용자 질문과 데이터를 보고 한국어로 인사이트를 생성합니다.
-반드시 다음 JSON 스키마로만 응답하세요. 마크다운 코드펜스 없이, 다른 텍스트 없이 순수 JSON만:
+반드시 다음 JSON 스키마로만 응답하세요:
 {
   "summary": "데이터에서 발견한 핵심을 1-2 문장으로",
   "cause": "근본 원인 가설을 2-3 문장으로",
@@ -83,42 +80,54 @@ export default async function handler(req, res) {
 }
 priority는 high/med/low. actions는 2-3개. followUps는 정확히 3개. 데이터의 실제 숫자에 근거하세요.`;
 
-    // Anthropic Claude API 호출
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
+    // Gemini API 호출
+    const model = 'gemini-2.5-flash';  // Flash = 빠르고 무료 한도 넉넉, 분석에 충분
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+
+    const geminiResponse = await fetch(geminiUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',  // Haiku 4.5 = 저비용, 적절한 성능
-        max_tokens: 1500,
-        system: systemPrompt,
-        messages: [{
+        systemInstruction: {
+          parts: [{ text: systemPrompt }]
+        },
+        contents: [{
           role: 'user',
-          content: `질문: ${question}\n\n데이터:\n${JSON.stringify(context, null, 2)}`
-        }]
+          parts: [{
+            text: `질문: ${question}\n\n데이터:\n${JSON.stringify(context, null, 2)}`
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 1500,
+          responseMimeType: 'application/json'  // JSON 모드 — 마크다운 펜스 없이 순수 JSON 반환
+        }
       })
     });
 
-    if (!anthropicResponse.ok) {
-      const errData = await anthropicResponse.json();
-      console.error('Anthropic API error:', errData);
-      return res.status(anthropicResponse.status).json({ 
-        error: `Claude API error: ${errData.error?.message || 'Unknown error'}` 
+    if (!geminiResponse.ok) {
+      const errData = await geminiResponse.json();
+      console.error('Gemini API error:', errData);
+      return res.status(geminiResponse.status).json({
+        error: `Gemini API error: ${errData.error?.message || 'Unknown error'}`
       });
     }
 
-    const data = await anthropicResponse.json();
-    
-    // 응답 파싱
-    const textContent = data.content
-      .filter(block => block.type === 'text')
-      .map(block => block.text)
-      .join('');
+    const data = await geminiResponse.json();
 
-    // JSON 추출 (마크다운 펜스 제거)
+    // 응답 파싱: candidates[0].content.parts[0].text
+    const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!textContent) {
+      console.error('Empty response from Gemini:', JSON.stringify(data).substring(0, 300));
+      return res.status(500).json({
+        error: 'Empty response from Gemini API'
+      });
+    }
+
+    // JSON 모드여도 방어적으로 펜스 제거
     const jsonText = textContent
       .replace(/```json\n?/g, '')
       .replace(/```\n?/g, '')
@@ -129,18 +138,17 @@ priority는 high/med/low. actions는 2-3개. followUps는 정확히 3개. 데이
       insight = JSON.parse(jsonText);
     } catch (parseErr) {
       console.error('JSON parse error:', parseErr, 'Raw text:', jsonText.substring(0, 200));
-      return res.status(500).json({ 
-        error: 'Failed to parse Claude response as JSON. The API might have returned unexpected format.' 
+      return res.status(500).json({
+        error: 'Failed to parse Gemini response as JSON. The API might have returned unexpected format.'
       });
     }
 
-    // 응답 반환
     return res.status(200).json({ insight });
 
   } catch (error) {
     console.error('Fatal error in analyze handler:', error);
-    return res.status(500).json({ 
-      error: `Server error: ${error.message}. Check Vercel logs for details.` 
+    return res.status(500).json({
+      error: `Server error: ${error.message}. Check Vercel logs for details.`
     });
   }
 }
